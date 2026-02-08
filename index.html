@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ApplyOnce Pro | Market Your Professional Identity</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            scroll-behavior: smooth;
+            background-color: #f8fafc;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .gradient-brand {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        }
+
+        .text-gradient {
+            background: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .animate-float {
+            animation: float 5s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .step-transition { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        /* Custom Checkbox/Radio */
+        .custom-radio:checked + label { border-color: #4f46e5; background-color: #f5f3ff; }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            body {
+                font-size: 14px;
+            }
+
+            .glass-card {
+                padding: 10px;
+            }
+
+            .gradient-brand {
+                background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            }
+
+            .text-gradient {
+                font-size: 1.5rem;
+            }
+
+            .animate-float img {
+                width: 100%;
+                height: auto;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                font-size: 12px;
+            }
+
+            .glass-card {
+                padding: 5px;
+            }
+
+            .gradient-brand {
+                background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            }
+
+            .text-gradient {
+                font-size: 1.2rem;
+            }
+
+            .animate-float img {
+                width: 100%;
+                height: auto;
+            }
+        }
+    </style>
+</head>
+<body class="text-slate-900">
+
+    <!-- Custom Notification Toast -->
+    <div id="toast" class="fixed top-6 right-6 z-[100] transform translate-x-full transition-all duration-500 ease-in-out">
+        <div class="bg-white border-l-4 border-indigo-600 shadow-2xl p-5 rounded-xl flex items-center space-x-4 min-w-[320px]">
+            <div id="toast-icon" class="w-10 h-10 rounded-full flex items-center justify-center bg-indigo-50 text-indigo-600"></div>
+            <div>
+                <p id="toast-title" class="text-sm font-bold text-slate-800"></p>
+                <p id="toast-desc" class="text-xs text-slate-500"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Entry Point -->
+    <div id="view-container"></div>
+
+    <script>
+        // --- Persistence Layer ---
+        const DB_KEY = 'applyonce_pro_data';
+        const AUTH_KEY = 'applyonce_pro_session';
+
+        const getDB = () => JSON.parse(localStorage.getItem(DB_KEY)) || { users: [] };
+        const saveDB = (db) => localStorage.setItem(DB_KEY, JSON.stringify(db));
+        const getSession = () => JSON.parse(localStorage.getItem(AUTH_KEY));
+        const setSession = (user) => localStorage.setItem(AUTH_KEY, JSON.stringify(user));
+        const endSession = () => localStorage.removeItem(AUTH_KEY);
+
+        // --- State Engine ---
+        const State = {
+            currentView: 'home',
+            onboardingStep: 1,
+            tempUserData: {},
+            
+            init() {
+                // Check for public profile link first
+                const hash = window.location.hash;
+                if (hash.startsWith('#profile/')) {
+                    Router.renderPublicProfile(hash.split('/')[1]);
+                    return;
+                }
+
+                const user = getSession();
+                if (user) {
+                    user.onboarded ? Router.to('dashboard') : Router.to('onboarding', 1);
+                } else {
+                    Router.to('home');
+                }
+            },
+
+            notify(title, desc, type = 'success') {
+                const toast = document.getElementById('toast');
+                document.getElementById('toast-title').innerText = title;
+                document.getElementById('toast-desc').innerText = desc;
+                const icon = document.getElementById('toast-icon');
+                icon.innerHTML = type === 'success' ? '<i class="fas fa-check"></i>' : '<i class="fas fa-exclamation"></i>';
+                
+                toast.classList.remove('translate-x-full');
+                setTimeout(() => toast.classList.add('translate-x-full'), 4000);
+            }
+        };
+
+        // --- Views ---
+        const Views = {
+            Home() {
+                return `
+                    <nav class="p-8 flex justify-between items-center max-w-7xl mx-auto">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 gradient-brand rounded-xl flex items-center justify-center text-white shadow-lg"><i class="fas fa-rocket"></i></div>
+                            <span class="text-2xl font-black tracking-tighter">ApplyOnce<span class="text-indigo-600">.pro</span></span>
+                        </div>
+                        <div class="space-x-4">
+                            <button onclick="Router.to('login')" class="font-bold text-slate-600 hover:text-indigo-600 px-4">Login</button>
+                            <button onclick="Router.to('register')" class="bg-slate-900 text-white px-6 py-3 rounded-xl font-bold shadow-xl hover:bg-indigo-600 transition">Get Started</button>
+                        </div>
+                    </nav>
+
+                    <main class="max-w-7xl mx-auto px-8 py-20 flex flex-col lg:flex-row items-center gap-16">
+                        <div class="lg:w-1/2 space-y-8">
+                            <div class="inline-block px-4 py-2 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold uppercase tracking-widest">The Career Market Engine</div>
+                            <h1 class="text-6xl md:text-8xl font-black leading-tight text-slate-900">Market yourself <br><span class="text-gradient">like a pro.</span></h1>
+                            <p class="text-xl text-slate-500 max-w-lg leading-relaxed font-medium italic">"One link to represent your entire professional journey. Apply once, and let the jobs find you."</p>
+                            
+                            <div class="grid grid-cols-2 gap-8 py-8 border-y border-slate-100">
+                                <div>
+                                    <h4 class="font-black text-indigo-600 mb-2">Our Mission</h4>
+                                    <p class="text-sm text-slate-500 font-medium">To empower workers by making their skills a portable, high-quality digital asset.</p>
+                                </div>
+                                <div>
+                                    <h4 class="font-black text-indigo-600 mb-2">Our Vision</h4>
+                                    <p class="text-sm text-slate-500 font-medium">A borderless job market driven by transparency and verifiable professional identities.</p>
+                                </div>
+                            </div>
+                            
+                            <button onclick="Router.to('register')" class="gradient-brand text-white px-10 py-5 rounded-2xl font-black text-lg shadow-2xl shadow-indigo-200 transition transform hover:-translate-y-1">Start Your Application Engine</button>
+                        </div>
+                        <div class="lg:w-1/2 relative">
+                            <div class="animate-float">
+                                <img src="https://files.catbox.moe/pcf0y9.jpg" class="rounded-[4rem] shadow-2xl grayscale hover:grayscale-0 transition duration-700">
+                            </div>
+                            <div class="absolute -bottom-8 -left-8 glass-card p-6 rounded-3xl shadow-xl flex items-center space-x-4 border border-white">
+                                <div class="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white"><i class="fas fa-check"></i></div>
+                                <div>
+                                    <p class="font-black text-sm text-slate-800 tracking-tight uppercase">Profile Verified</p>
+                                    <p class="text-xs text-slate-500">Ready for Global Outreach</p>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                `;
+            },
+
+            Auth(mode) {
+                return `
+                    <div class="min-h-screen flex items-center justify-center p-6 bg-slate-50">
+                        <div class="bg-white p-12 rounded-[3rem] shadow-2xl max-w-lg w-full">
+                            <div class="text-center mb-10">
+                                <button onclick="Router.to('home')" class="text-slate-400 hover:text-indigo-600 mb-6 transition"><i class="fas fa-arrow-left"></i></button>
+                                <h2 class="text-4xl font-black text-slate-900">${mode === 'login' ? 'Welcome Back' : 'Create Account'}</h2>
+                                <p class="text-slate-500 mt-2 font-medium">Powering your professional reach.</p>
+                            </div>
+                            <form onsubmit="Logic.handleAuth(event, '${mode}')" class="space-y-5">
+                                ${mode === 'register' ? `
+                                    <div>
+                                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Full Name</label>
+                                        <input type="text" id="auth-name" required class="w-full px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                                    </div>
+                                ` : ''}
+                                <div>
+                                    <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Email Address</label>
+                                    <input type="email" id="auth-email" required class="w-full px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Password</label>
+                                    <input type="password" id="auth-pass" required class="w-full px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                                </div>
+                                <button type="submit" class="w-full gradient-brand text-white py-5 rounded-2xl font-black text-lg shadow-xl shadow-indigo-100 mt-4 tracking-tight uppercase">
+                                    ${mode === 'login' ? 'Sign In' : 'Register Now'}
+                                </button>
+                            </form>
+                            <div class="mt-8 text-center">
+                                <button onclick="Router.to('${mode === 'login' ? 'register' : 'login'}')" class="text-indigo-600 font-bold hover:underline">
+                                    ${mode === 'login' ? "New here? Create your identity" : 'Already joined? Login'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            Onboarding(step) {
+                const user = getSession();
+                const avatars = [
+                    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop',
+                    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop',
+                    'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&h=150&fit=crop',
+                    'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=150&h=150&fit=crop'
+                ];
+
+                let stepContent = '';
+                if(step === 1) {
+                    stepContent = `
+                        <h2 class="text-4xl font-black mb-4">The Identity Basis.</h2>
+                        <p class="text-slate-500 mb-10">Select your professional avatar and core headline.</p>
+                        
+                        <div class="mb-10">
+                            <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Choose Avatar</p>
+                            <div class="flex flex-wrap gap-4">
+                                ${avatars.map(url => `
+                                    <div onclick="Logic.selectAvatar('${url}')" class="w-20 h-20 rounded-2xl cursor-pointer border-4 transition ${State.tempUserData.avatar === url ? 'border-indigo-600 scale-110' : 'border-transparent hover:border-slate-200'}">
+                                        <img src="${url}" class="w-full h-full rounded-xl object-cover">
+                                    </div>
+                                `).join('')}
+                                <div class="w-20 h-20 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 text-xs text-center px-2 cursor-help" title="Pro users can upload custom">Custom API Enabled</div>
+                            </div>
+                            <input type="text" id="ob-avatar" placeholder="Or paste image URL..." value="${State.tempUserData.avatar || ''}" class="mt-6 w-full px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+
+                        <div class="grid md:grid-cols-2 gap-6 mb-10">
+                            <div>
+                                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Professional Headline</label>
+                                <input type="text" id="ob-title" placeholder="e.g. Senior Creative Director" value="${State.tempUserData.title || ''}" class="w-full px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Location</label>
+                                <input type="text" id="ob-location" placeholder="City, Country" value="${State.tempUserData.location || ''}" class="w-full px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                        </div>
+                    `;
+                } else if(step === 2) {
+                    stepContent = `
+                        <h2 class="text-4xl font-black mb-4">Skill Matrix.</h2>
+                        <p class="text-slate-500 mb-10">What tools and expertise do you bring to the market?</p>
+                        
+                        <div class="space-y-6 mb-10">
+                            <div>
+                                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Expertise Bio</label>
+                                <textarea id="ob-bio" rows="4" placeholder="Brief but powerful summary of your career highlights..." class="w-full px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-indigo-500">${State.tempUserData.bio || ''}</textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Core Skills (Comma separated)</label>
+                                <input type="text" id="ob-skills" placeholder="React, Figma, Project Management" value="${State.tempUserData.skills || ''}" class="w-full px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    stepContent = `
+                        <h2 class="text-4xl font-black mb-4">Final Configuration.</h2>
+                        <p class="text-slate-500 mb-10">Connect your socials and secure your documents.</p>
+                        
+                        <div class="grid md:grid-cols-2 gap-6 mb-10">
+                            <div>
+                                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">LinkedIn URL</label>
+                                <input type="text" id="ob-linkedin" placeholder="linkedin.com/in/..." value="${State.tempUserData.linkedin || ''}" class="w-full px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">GitHub / Portfolio</label>
+                                <input type="text" id="ob-github" placeholder="github.com/..." value="${State.tempUserData.github || ''}" class="w-full px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                        </div>
+
+                        <div class="p-10 border-4 border-dashed border-slate-100 rounded-[2.5rem] text-center mb-10">
+                            <i class="fas fa-file-pdf text-5xl text-indigo-100 mb-4"></i>
+                            <h4 class="font-bold text-slate-800">Professional Resume</h4>
+                            <p class="text-sm text-slate-400 mb-6">Verified document for recruiter download</p>
+                            <input type="file" id="ob-file" class="hidden" onchange="Logic.handleFileLabel(this)">
+                            <button type="button" onclick="document.getElementById('ob-file').click()" class="bg-white border-2 border-slate-100 px-6 py-2 rounded-xl font-bold hover:border-indigo-500 transition">Attach Document</button>
+                            <p id="file-status" class="mt-4 text-indigo-600 font-bold text-sm"></p>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="min-h-screen bg-slate-50 py-20 px-6 flex items-center">
+                        <div class="max-w-4xl mx-auto w-full">
+                            <div class="flex justify-between items-center mb-12 relative">
+                                <div class="absolute top-1/2 left-0 w-full h-1 bg-slate-200 -z-10 -translate-y-1/2"></div>
+                                <div class="w-12 h-12 rounded-full ${step >= 1 ? 'bg-indigo-600 text-white' : 'bg-white text-slate-400 border'} flex items-center justify-center font-black shadow-lg">1</div>
+                                <div class="w-12 h-12 rounded-full ${step >= 2 ? 'bg-indigo-600 text-white' : 'bg-white text-slate-400 border'} flex items-center justify-center font-black shadow-lg">2</div>
+                                <div class="w-12 h-12 rounded-full ${step >= 3 ? 'bg-indigo-600 text-white' : 'bg-white text-slate-400 border'} flex items-center justify-center font-black shadow-lg">3</div>
+                            </div>
+
+                            <div class="bg-white p-12 rounded-[3.5rem] shadow-2xl border border-slate-100 step-transition">
+                                ${stepContent}
+                                <div class="flex space-x-4">
+                                    ${step > 1 ? `<button onclick="Logic.prevStep()" class="px-10 py-5 border-2 border-slate-100 rounded-2xl font-black hover:bg-slate-50 transition">Back</button>` : ''}
+                                    <button onclick="${step === 3 ? 'Logic.completeOnboarding()' : 'Logic.nextStep()'}" class="flex-grow gradient-brand text-white px-10 py-5 rounded-2xl font-black text-lg hover:shadow-xl transition">
+                                        ${step === 3 ? 'Activate My Market Profile' : 'Continue Step'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            Dashboard(tab = 'overview') {
+                const user = getSession();
+                return `
+                    <div class="flex flex-col md:flex-row min-h-screen bg-slate-50">
+                        <!-- Sidebar -->
+                        <aside class="w-full md:w-80 bg-white border-r border-slate-100 p-10 flex flex-col glass-card">
+                            <div class="flex items-center space-x-3 mb-16">
+                                <div class="w-8 h-8 gradient-brand rounded-lg flex items-center justify-center text-white"><i class="fas fa-bolt text-xs"></i></div>
+                                <span class="text-xl font-black tracking-tighter">ApplyOnce<span class="text-indigo-600">.pro</span></span>
+                            </div>
+
+                            <div class="flex flex-col items-center mb-12">
+                                <div class="w-24 h-24 rounded-[2rem] overflow-hidden mb-4 shadow-xl ring-4 ring-white">
+                                    <img src="${user.details?.avatar || 'https://via.placeholder.com/150'}" class="w-full h-full object-cover">
+                                </div>
+                                <h3 class="font-black text-slate-800">${user.name}</h3>
+                                <p class="text-[10px] font-black text-indigo-500 uppercase tracking-widest">${user.details?.title || 'Professional'}</p>
+                            </div>
+
+                            <nav class="space-y-2 flex-grow">
+                                <button onclick="Router.to('dashboard', 'overview')" class="w-full flex items-center space-x-4 p-4 rounded-2xl transition ${tab === 'overview' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}">
+                                    <i class="fas fa-chart-pie w-6"></i>
+                                    <span class="font-bold">Overview</span>
+                                </button>
+                                <button onclick="Router.to('dashboard', 'profile')" class="w-full flex items-center space-x-4 p-4 rounded-2xl transition ${tab === 'profile' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}">
+                                    <i class="fas fa-user-astronaut w-6"></i>
+                                    <span class="font-bold">My Profile</span>
+                                </button>
+                                <button onclick="Router.to('dashboard', 'settings')" class="w-full flex items-center space-x-4 p-4 rounded-2xl transition ${tab === 'settings' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}">
+                                    <i class="fas fa-sliders w-6"></i>
+                                    <span class="font-bold">Settings</span>
+                                </button>
+                            </nav>
+
+                            <button onclick="Logic.logout()" class="mt-auto flex items-center space-x-4 p-4 text-red-500 font-bold hover:bg-red-50 rounded-2xl transition">
+                                <i class="fas fa-sign-out-alt"></i>
+                                <span>Logout</span>
+                            </button>
+                        </aside>
+
+                        <!-- Content -->
+                        <main class="flex-grow p-8 md:p-16 overflow-y-auto">
+                            ${this.DashboardTab(tab, user)}
+                        </main>
+                    </div>
+                `;
+            },
+
+            DashboardTab(tab, user) {
+                if (tab === 'overview') {
+                    return `
+                        <header class="mb-12 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                            <div>
+                                <h1 class="text-4xl font-black text-slate-900 tracking-tight">Market Analytics</h1>
+                                <p class="text-slate-500 font-medium">Your professional profile is gaining traction.</p>
+                            </div>
+                            <div class="flex space-x-3">
+                                <button onclick="Logic.copyLink('${user.id}')" class="bg-white border-2 border-slate-100 px-6 py-3 rounded-xl font-bold flex items-center space-x-2 hover:border-indigo-600 transition">
+                                    <i class="fas fa-share-alt text-indigo-600"></i>
+                                    <span>Copy Share Link</span>
+                                </button>
+                            </div>
+                        </header>
+
+                        <div class="grid md:grid-cols-3 gap-8 mb-12">
+                            <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Profile Impact</p>
+                                <h4 class="text-4xl font-black">1,204</h4>
+                                <p class="text-xs text-emerald-500 font-bold mt-2"><i class="fas fa-arrow-up"></i> +22% vs last week</p>
+                            </div>
+                            <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">CV Inquiries</p>
+                                <h4 class="text-4xl font-black">28</h4>
+                                <p class="text-xs text-indigo-500 font-bold mt-2">Active Recruiter Leads</p>
+                            </div>
+                            <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Profile Health</p>
+                                <h4 class="text-4xl font-black text-emerald-500">98%</h4>
+                                <div class="w-full h-1.5 bg-slate-100 rounded-full mt-4">
+                                    <div class="h-full bg-emerald-500 rounded-full w-[98%]"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-900 rounded-[3rem] p-12 text-white relative overflow-hidden shadow-2xl">
+                            <div class="relative z-10">
+                                <h2 class="text-3xl font-black mb-4">Promote your brand.</h2>
+                                <p class="text-slate-400 max-w-md mb-8 leading-relaxed"> recruiters are looking for experts like you. Your link is live and verifiable across the entire ApplyOnce ecosystem.</p>
+                                <div class="flex flex-col sm:flex-row items-center gap-4">
+                                    <input readonly value="${window.location.origin}${window.location.pathname}#profile/${user.id}" class="bg-white/10 border border-white/20 px-6 py-4 rounded-2xl w-full sm:w-auto sm:flex-grow outline-none text-indigo-300 font-bold">
+                                    <button onclick="Logic.copyLink('${user.id}')" class="w-full sm:w-auto bg-white text-slate-900 px-8 py-4 rounded-2xl font-black hover:bg-indigo-50 transition">Copy URL</button>
+                                </div>
+                            </div>
+                            <i class="fas fa-bullhorn absolute top-0 right-0 p-12 text-[12rem] text-white/5 pointer-events-none"></i>
+                        </div>
+                    `;
+                } else if(tab === 'profile') {
+                    return `
+                        <div class="max-w-4xl mx-auto">
+                            <div class="bg-white rounded-[3.5rem] shadow-2xl overflow-hidden border border-slate-100">
+                                <div class="h-64 bg-slate-900 relative">
+                                    <div class="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+                                    <div class="absolute -bottom-16 left-12 w-40 h-40 rounded-[2.5rem] border-8 border-white shadow-2xl overflow-hidden bg-slate-100">
+                                        <img src="${user.details?.avatar}" class="w-full h-full object-cover">
+                                    </div>
+                                </div>
+                                <div class="pt-24 px-12 pb-16">
+                                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
+                                        <div>
+                                            <h2 class="text-4xl font-black text-slate-900">${user.name}</h2>
+                                            <p class="text-xl text-indigo-600 font-black tracking-widest uppercase mt-1">${user.details?.title}</p>
+                                            <div class="flex flex-wrap gap-6 mt-6 text-slate-500 font-bold text-sm">
+                                                <span><i class="fas fa-map-marker-alt text-indigo-600 mr-2"></i> ${user.details?.location}</span>
+                                                <span><i class="fas fa-envelope text-indigo-600 mr-2"></i> ${user.email}</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <a href="${user.details?.linkedin}" target="_blank" class="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 hover:text-indigo-600 transition"><i class="fab fa-linkedin-in text-xl"></i></a>
+                                            <a href="${user.details?.github}" target="_blank" class="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 transition"><i class="fab fa-github text-xl"></i></a>
+                                        </div>
+                                    </div>
+
+                                    <div class="grid md:grid-cols-3 gap-12">
+                                        <div class="md:col-span-2 space-y-12">
+                                            <section>
+                                                <h3 class="text-lg font-black text-slate-900 mb-4 flex items-center"><span class="w-8 h-1 bg-indigo-600 mr-4"></span> The Pitch</h3>
+                                                <p class="text-slate-600 leading-relaxed text-lg font-medium italic">"${user.details?.bio}"</p>
+                                            </section>
+                                            <section>
+                                                <h3 class="text-lg font-black text-slate-900 mb-4 flex items-center"><span class="w-8 h-1 bg-indigo-600 mr-4"></span> Expertise Stack</h3>
+                                                <div class="flex flex-wrap gap-2">
+                                                    ${(user.details?.skills || '').split(',').map(s => `<span class="bg-slate-50 border border-slate-100 px-4 py-2 rounded-xl text-xs font-black text-slate-700 uppercase tracking-widest">#${s.trim()}</span>`).join('')}
+                                                </div>
+                                            </section>
+                                        </div>
+                                        <aside class="space-y-8">
+                                            <div class="p-8 bg-indigo-50 rounded-[2.5rem] border border-indigo-100">
+                                                <h4 class="font-black text-indigo-900 mb-4 uppercase text-xs tracking-widest">Master Document</h4>
+                                                <div class="flex items-center space-x-4 mb-6">
+                                                    <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-red-500 shadow-sm"><i class="fas fa-file-pdf text-xl"></i></div>
+                                                    <div>
+                                                        <p class="text-sm font-black text-indigo-900 truncate w-32">${user.details?.fileName || 'Curriculum_Vitae.pdf'}</p>
+                                                        <p class="text-[10px] text-indigo-400 uppercase font-black">Verified</p>
+                                                    </div>
+                                                </div>
+                                                <button onclick="State.notify('Download Started', 'Fetching your latest document...')" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black hover:bg-indigo-700 transition">Download CV</button>
+                                            </div>
+                                        </aside>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="max-w-2xl mx-auto">
+                            <h1 class="text-4xl font-black mb-8">System Settings</h1>
+                            <div class="bg-white p-12 rounded-[3.5rem] border border-slate-100 space-y-8">
+                                <div>
+                                    <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Display Name</label>
+                                    <input type="text" id="set-name" value="${user.name}" class="w-full px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                                <div class="p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="font-black text-slate-800">Private Profile Mode</p>
+                                            <p class="text-xs text-slate-400">Hide your profile from public search results.</p>
+                                        </div>
+                                        <div class="w-12 h-6 bg-slate-200 rounded-full relative"><div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full"></div></div>
+                                    </div>
+                                </div>
+                                <div class="pt-6 flex flex-col gap-4">
+                                    <button onclick="Logic.handleSettingsUpdate()" class="w-full bg-slate-900 text-white py-5 rounded-2xl font-black hover:bg-indigo-600 transition">Save Changes</button>
+                                    <button onclick="Logic.handleDelete()" class="text-red-500 font-bold text-sm hover:underline">Deactivate Identity Engine</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            },
+
+            PublicProfile(user) {
+                return `
+                    <div class="min-h-screen bg-white">
+                        <nav class="p-8 border-b border-slate-50 glass-card sticky top-0 z-50 flex justify-between items-center">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-8 h-8 gradient-brand rounded-lg flex items-center justify-center text-white"><i class="fas fa-rocket text-xs"></i></div>
+                                <span class="text-lg font-black tracking-tighter">ApplyOnce<span class="text-indigo-600">.pro</span></span>
+                            </div>
+                            <button onclick="window.location.hash=''; location.reload();" class="text-sm font-black text-indigo-600 bg-indigo-50 px-5 py-2 rounded-xl">Create My Own Link</button>
+                        </nav>
+
+                        <div class="max-w-5xl mx-auto px-6 py-24 fade-in">
+                            <div class="flex flex-col md:flex-row items-center md:items-end gap-12 mb-20">
+                                <div class="w-64 h-64 rounded-[4rem] shadow-2xl overflow-hidden ring-8 ring-slate-50">
+                                    <img src="${user.details?.avatar}" class="w-full h-full object-cover">
+                                </div>
+                                <div class="flex-grow text-center md:text-left">
+                                    <div class="flex flex-col md:flex-row items-center justify-between mb-4 gap-4">
+                                        <h1 class="text-6xl font-black text-slate-900 tracking-tight">${user.name}</h1>
+                                        <div class="bg-emerald-100 text-emerald-700 px-6 py-2 rounded-full font-black text-xs uppercase tracking-widest">Actively Looking</div>
+                                    </div>
+                                    <p class="text-2xl text-indigo-600 font-black tracking-widest uppercase mb-8">${user.details?.title}</p>
+                                    <div class="flex flex-wrap justify-center md:justify-start gap-8 text-slate-500 font-black text-xs tracking-widest uppercase">
+                                        <span><i class="fas fa-map-marker-alt text-indigo-600 mr-2"></i> ${user.details?.location}</span>
+                                        <span><i class="fas fa-check-circle text-indigo-600 mr-2"></i> Verified Talent</span>
+                                    </div>
+                                    <div class="mt-12 flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
+                                        <button onclick="State.notify('Connection Sent', 'Wait for response.')" class="bg-slate-900 text-white px-10 py-5 rounded-2xl font-black text-lg shadow-xl shadow-slate-200 transition transform hover:-translate-y-1">Contact Privately</button>
+                                        <button class="px-10 py-5 border-2 border-slate-100 rounded-2xl font-black hover:bg-slate-50 transition">Get Verified CV</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid lg:grid-cols-3 gap-20">
+                                <div class="lg:col-span-2 space-y-20">
+                                    <section>
+                                        <h3 class="text-3xl font-black mb-8 flex items-center"><span class="w-12 h-2 bg-indigo-600 mr-6 rounded-full"></span> Career Narrative</h3>
+                                        <p class="text-slate-600 text-2xl leading-relaxed font-medium italic">"${user.details?.bio}"</p>
+                                    </section>
+                                    <section>
+                                        <h3 class="text-3xl font-black mb-8 flex items-center"><span class="w-12 h-2 bg-indigo-600 mr-6 rounded-full"></span> Core Competencies</h3>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            ${(user.details?.skills || '').split(',').map(s => `
+                                                <div class="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 flex items-center space-x-4 hover:border-indigo-300 transition group">
+                                                    <div class="w-3 h-3 bg-indigo-600 rounded-full group-hover:scale-150 transition"></div>
+                                                    <span class="font-black text-slate-700 uppercase tracking-widest text-sm">${s.trim()}</span>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </section>
+                                </div>
+                                <aside>
+                                    <div class="p-10 bg-slate-900 rounded-[3.5rem] text-white shadow-2xl sticky top-32">
+                                        <h4 class="text-lg font-black mb-8 uppercase tracking-widest">Connect Locally</h4>
+                                        <div class="space-y-6">
+                                            <a href="${user.details?.linkedin}" class="flex items-center space-x-4 hover:text-indigo-400 transition">
+                                                <div class="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center"><i class="fab fa-linkedin-in"></i></div>
+                                                <span class="font-bold">LinkedIn Profile</span>
+                                            </a>
+                                            <a href="${user.details?.github}" class="flex items-center space-x-4 hover:text-indigo-400 transition">
+                                                <div class="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center"><i class="fab fa-github"></i></div>
+                                                <span class="font-bold">Project Hub</span>
+                                            </a>
+                                            <hr class="border-white/10">
+                                            <p class="text-xs text-slate-400 font-medium">This profile is part of the ApplyOnce decentralized recruiter network.</p>
+                                        </div>
+                                    </div>
+                                </aside>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        };
+
+        // --- Logic Controller ---
+        const Logic = {
+            handleAuth(e, mode) {
+                e.preventDefault();
+                const db = getDB();
+                const email = document.getElementById('auth-email').value;
+                const pass = document.getElementById('auth-pass').value;
+
+                if (mode === 'register') {
+                    if (db.users.find(u => u.email === email)) {
+                        State.notify('Email Taken', 'Please use a different address.', 'error');
+                        return;
+                    }
+                    const user = {
+                        id: Math.random().toString(36).substr(2, 9),
+                        name: document.getElementById('auth-name').value,
+                        email, pass, onboarded: false
+                    };
+                    db.users.push(user);
+                    saveDB(db);
+                    setSession(user);
+                    Router.to('onboarding', 1);
+                } else {
+                    const user = db.users.find(u => u.email === email && u.pass === pass);
+                    if (user) {
+                        setSession(user);
+                        user.onboarded ? Router.to('dashboard') : Router.to('onboarding', 1);
+                    } else {
+                        State.notify('Failed', 'Invalid email or password.', 'error');
+                    }
+                }
+            },
+
+            selectAvatar(url) {
+                State.tempUserData.avatar = url;
+                Router.to('onboarding', 1);
+            },
+
+            nextStep() {
+                const s = State.onboardingStep;
+                if(s === 1) {
+                    State.tempUserData.avatar = document.getElementById('ob-avatar').value || State.tempUserData.avatar;
+                    State.tempUserData.title = document.getElementById('ob-title').value;
+                    State.tempUserData.location = document.getElementById('ob-location').value;
+                } else if(s === 2) {
+                    State.tempUserData.bio = document.getElementById('ob-bio').value;
+                    State.tempUserData.skills = document.getElementById('ob-skills').value;
+                }
+                State.onboardingStep++;
+                Router.to('onboarding', State.onboardingStep);
+            },
+
+            prevStep() {
+                State.onboardingStep--;
+                Router.to('onboarding', State.onboardingStep);
+            },
+
+            completeOnboarding() {
+                const sessionUser = getSession();
+                const db = getDB();
+                const userIdx = db.users.findIndex(u => u.id === sessionUser.id);
+                
+                State.tempUserData.linkedin = document.getElementById('ob-linkedin').value;
+                State.tempUserData.github = document.getElementById('ob-github').value;
+                State.tempUserData.fileName = document.getElementById('ob-file').files[0]?.name || 'resume_v1.pdf';
+
+                db.users[userIdx].details = {...State.tempUserData};
+                db.users[userIdx].onboarded = true;
+                
+                saveDB(db);
+                setSession(db.users[userIdx]);
+                State.notify('Identity Launched', 'Welcome to the future of recruitment.');
+                Router.to('dashboard');
+            },
+
+            handleFileLabel(input) {
+                const status = document.getElementById('file-status');
+                if(status) status.innerText = input.files[0] ? `Loaded: ${input.files[0].name}` : '';
+            },
+
+            copyLink(id) {
+                const url = `${window.location.origin}${window.location.pathname}#profile/${id}`;
+                const el = document.createElement('textarea');
+                el.value = url;
+                document.body.appendChild(el);
+                el.select();
+                document.execCommand('copy');
+                document.body.removeChild(el);
+                State.notify('URL Copied', 'Share this link with anyone.');
+            },
+
+            handleSettingsUpdate() {
+                const user = getSession();
+                const db = getDB();
+                const idx = db.users.findIndex(u => u.id === user.id);
+                db.users[idx].name = document.getElementById('set-name').value;
+                saveDB(db);
+                setSession(db.users[idx]);
+                State.notify('Updated', 'Settings saved.');
+                Router.to('dashboard', 'settings');
+            },
+
+            handleDelete() {
+                if(confirm('Warning: This will permanently purge your professional identity from our systems.')) {
+                    const user = getSession();
+                    const db = getDB();
+                    db.users = db.users.filter(u => u.id !== user.id);
+                    saveDB(db);
+                    this.logout();
+                }
+            },
+
+            logout() {
+                endSession();
+                location.reload();
+            }
+        };
+
+        // --- Router ---
+        const Router = {
+            to(view, params = null) {
+                const container = document.getElementById('view-container');
+                State.currentView = view;
+                
+                switch(view) {
+                    case 'home': container.innerHTML = Views.Home(); break;
+                    case 'login': container.innerHTML = Views.Auth('login'); break;
+                    case 'register': container.innerHTML = Views.Auth('register'); break;
+                    case 'onboarding': 
+                        State.onboardingStep = params || 1;
+                        container.innerHTML = Views.Onboarding(State.onboardingStep); 
+                        break;
+                    case 'dashboard': container.innerHTML = Views.Dashboard(params || 'overview'); break;
+                }
+            },
+
+            renderPublicProfile(id) {
+                const db = getDB();
+                const user = db.users.find(u => u.id === id);
+                const container = document.getElementById('view-container');
+                if(user) {
+                    container.innerHTML = Views.PublicProfile(user);
+                } else {
+                    container.innerHTML = `<div class="h-screen flex items-center justify-center font-black text-slate-400">404 IDENTITY NOT FOUND</div>`;
+                }
+            }
+        };
+
+        window.onload = () => Router.init();
+        window.onhashchange = () => State.init();
+        Router.init = () => State.init();
+    </script>
+</body>
+</html>
